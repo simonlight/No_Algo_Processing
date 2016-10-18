@@ -57,18 +57,24 @@ def valide_fixations(train_list, eye_tracking_path, valide_subjs, eye_tracking_j
                 et.readline()
                 new_fixations = collections.defaultdict(lambda:[])
                 
+                last_time=0
                 for line in et:
                     time, pupil_diameter, pupil_area, x_screen, y_screen, event = line.strip().split('\t')
+                    
                     if event == 'F':
+                        if int(time)-last_time>10000:
+                            print line
+                            print file
+                        last_time=int(time)
                         x_stimulus, y_stimulus = mapping(image_res_x, image_res_y, int(float(x_screen)), int(float(y_screen)))
                         if fix_in_image(x_stimulus, y_stimulus,image_res_x, image_res_y):
                             new_fixations[str(subj).strip()].append([int(x_stimulus),int(y_stimulus)])
                 et.close()
                 new_fixations.update(old_fixations) 
                 
-                gaze_json = open(json_path,'w')
-                json.dump(new_fixations,gaze_json)
-                gaze_json.close()
+#                 gaze_json = open(json_path,'w')
+#                 json.dump(new_fixations,gaze_json)
+#                 gaze_json.close()
                 
 def slice_cnt(x,y,left, right, up, down):
     if x>left and x<=right and y>up and y<=down:
@@ -102,7 +108,7 @@ def calculate_gaze_ratio(train_list, gaze_path):
                 down = (d1_inc+1) * image_res_y/10.0
                 for ob in fixations.values():
                     for (point_x, point_y) in ob:
-                         integrate_image[d1_inc][d2_inc]+=slice_cnt(point_x, point_y, left, right, up, down)
+                        integrate_image[d1_inc][d2_inc]+=slice_cnt(point_x, point_y, left, right, up, down)
         for scale in scales:
             block_num = int(math.sqrt(scale))
             check=0
@@ -195,10 +201,12 @@ if __name__ == "__main__":
     import json
     import math
     import numpy as np
-#     valide_fixations("/local/wangxin/Data/VOCdevkit_trainset/VOC2012/ImageSets/Action/trainval.txt", VOC2012_ACTION_EYE_PATH, VOC2012_ACTION_VALIDE_SUBJS, VOC2012_ACTION_EYE_ACTION_JSON_PATH)
+    valide_fixations("/local/wangxin/Data/VOCdevkit_trainset/VOC2012/ImageSets/Action/trainval.txt", VOC2012_ACTION_EYE_PATH, VOC2012_ACTION_VALIDE_SUBJS, VOC2012_ACTION_EYE_ACTION_JSON_PATH)
 #     calculate_gaze_ratio("/local/wangxin/Data/VOCdevkit_trainset/VOC2012/ImageSets/Action/trainval.txt", VOC2012_ACTION_EYE_ACTION_JSON_PATH)
-    import xml.etree.cElementTree as ET
-    import metric_calculate
-    print "stefan bb starts"
-    calculate_ground_truth_bb_loss("/local/wangxin/Data/VOCdevkit_trainset/VOC2012/ImageSets/Action/trainval.txt", VOC2012_ACTION_EYE_ACTION_JSON_PATH)
-    print "stefan bb finis"
+    
+    #boundging box loss
+#     import xml.etree.cElementTree as ET
+#     import metric_calculate
+#     print "stefan bb starts"
+#     calculate_ground_truth_bb_loss("/local/wangxin/Data/VOCdevkit_trainset/VOC2012/ImageSets/Action/trainval.txt", VOC2012_ACTION_EYE_ACTION_JSON_PATH)
+#     print "stefan bb finis"

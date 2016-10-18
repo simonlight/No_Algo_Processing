@@ -14,11 +14,11 @@ slice = 10.0
 #Extracting the fixations from the code of Ferrari eccv2014
 
 def read_fixations(fixation_file, cls, eye_path):
-    f = open(eye_path+cls + '_' + fixation_file)
+    f = open(eye_path+cls + '/'+fixation_file)
     fixations = []
     for line in f: 
-        x,y = line.strip().split(',')
-        fixations.append([int(x),int(y)])
+        x,y,duration = line.strip().split(',')
+        fixations.append([int(float(x)),int(float(y)), int(float(duration))])
     f.close()
     return fixations
 
@@ -28,16 +28,14 @@ def slice_cnt(x,y,left, right, up, down):
     else:
         return 0.0
 
-def calculate_gaze_ratio(eye_path=VOC2012_OBJECT_EYE_PATH, annotations = VOC2012_TRAIN_ANNOTATIONS):
+def calculate_gaze_number(eye_path=VOC2012_OBJECT_EYE_PATH, annotations = VOC2012_TRAIN_ANNOTATIONS):
+    
     for root,dirs,files in os.walk(eye_path):
-        for cnt, filename in enumerate(files):
-            print cnt
-            fixation_file = '_'.join(([filename.split('_')[1], filename.split('_')[2]]))
-            im = fixation_file[:-4]+'.jpg'
-            cls = filename.split('_')[0]
-            image_res_x, image_res_y= Image.open(VOC2012_TRAIN_IMAGES +im).size
-            fixations = read_fixations(fixation_file, cls, eye_path)
-        
+        for cnt, fixation_filename in enumerate(files):
+            cls = root.split('/')[-1]
+            file_root = fixation_filename.split('.')
+            image_res_x, image_res_y= Image.open(VOC2012_TRAIN_IMAGES +file_root[0]+'.jpg').size
+            fixations = read_fixations(fixation_filename, cls, eye_path)
             integrate_image = np.zeros((10,10))
             for d1_inc in range(0,10):
                 for d2_inc in range(0,10):
@@ -45,24 +43,20 @@ def calculate_gaze_ratio(eye_path=VOC2012_OBJECT_EYE_PATH, annotations = VOC2012
                     right = (d2_inc+1) * image_res_x/10.0
                     up = (d1_inc) * image_res_y/10.0
                     down = (d1_inc+1) * image_res_y/10.0
-                    for point_x, point_y in fixations:
-                         integrate_image[d1_inc][d2_inc]+=slice_cnt(point_x, point_y, left, right, up, down)
+                    for point_x, point_y,duration in fixations:
+                        integrate_image[d1_inc][d2_inc]+= duration*slice_cnt(point_x, point_y, left, right, up, down)
             for scale in scales:
                 block_num = int(math.sqrt(scale))
-                check=0
                 for i_x in range(block_num):
                     for i_y in range(block_num):
-                        ratio = np.sum(integrate_image[i_x:11-block_num+i_x, i_y:11-block_num+i_y])/len(fixations)
+                        total_num = np.sum(integrate_image[i_x:11-block_num+i_x, i_y:11-block_num+i_y])
 
-                        folder = VOC2012_OBJECT_ETLOSS_ACTION+cls+'/'+str(scale)+'/'
+                        folder = VOC2012_OBJECT_ETLOSS+cls+'/'+str(scale)+'/'
                         if not os.path.exists(folder):
                             os.makedirs(folder)
-                        if scale == 1:
-                            etloss_filename = folder+cls+'_' +im[:-4]+'.txt'
-                        else:
-                            etloss_filename = folder+cls+'_' +im[:-4]+'_'+str(i_x)+'_'+str(i_y)+'.txt'
+                        etloss_filename = folder+cls+'_' +file_root[0]+'_'+str(i_x)+'_'+str(i_y)+'.txt'
                         loss_file = open(etloss_filename,'w')
-                        loss_file.write(str(ratio))
+                        loss_file.write(str(total_num))
                         loss_file.close()
 #                     check+=ratio
 def ground_truth_bb(filerootname, category):
@@ -118,8 +112,9 @@ def calculate_ground_truth_bb_loss(eye_path=VOC2012_OBJECT_EYE_PATH, annotations
 #                     check+=ratio
 if __name__ == "__main__":
     import xml.etree.cElementTree as ET
-    import metric_calculate
-    print "ferrari bb starts"
-    calculate_ground_truth_bb_loss()
-    print "ferrari bb finis"
-    
+    from path_config import *
+#     from evaluation import metric_calculate
+#     print "ferrari bb starts"
+#     calculate_ground_truth_bb_loss()
+#     print "ferrari bb finis"
+    calculate_gaze_number(eye_path=VOC2012_OBJECT_EYE_PATH, annotations = VOC2012_TRAIN_ANNOTATIONS)

@@ -1,5 +1,8 @@
+import numpy as np
+import math
+from numpy import std
+
 def glsvm():
-    import numpy as np
     scale_obj_list=[100,90,80,70,60,50,40,30]
     tradeoff_obj_list=[0.2]
     index_list=[0,1,2,3,4]
@@ -19,20 +22,45 @@ def glsvm():
                 ap_test_all.append(ap_test_split/20)
             print "%4.2f,"%(np.mean(ap_test_all)*100),
 
+def pair_t_test(std,g):
+
+    pair=[]
+    pair.append(np.array(g)-np.array(std))
+#         print np.mean(g[k]), np.mean(std[k])
+    print "t-value:%f, mean:%f, std:%f"%(math.sqrt(5)*np.mean(pair)/np.std(pair),np.mean(pair), np.std(pair)) 
 
 def npglsvm():
-    import numpy as np
-    scale_obj_list=[100,90,80,70,60,50,40,30]
-    pos_tradeoff_obj_list=[0.1]
-    neg_tradeoff_obj_list=[0.0,0.001]
+    scale_obj_list=[90,80,70,60,50,40,30]
+    pos_tradeoff_obj_list=[0.2,0.1]
+    neg_tradeoff_obj_list=[0.0, 0.001,0.01,0.1]
     index_list=[0,1,2,3,4]
+    base = ("full_stefan_gaze", "stefan")
     for scale_obj in scale_obj_list:
+        
+        ap_lsvm = []
+        
+        for index_obj in index_list:
+                    ap_test_split=0
+                    f= open("/local/wangxin/results/%s/npglsvm_%s_traintrainlist_testtestlist_5split/ap_summary_ecarttype_seed1_detail.txt"%base)
+                    c=0
+                    for line_index, line in enumerate(f):
+                        category, lbd, scale, ptradeoff,ntradeoff, index, ap_test, ap_train = line.split()
+                        if (int(scale.split(':')[1])==scale_obj and
+                            float(ptradeoff.split(':')[1])==0.0 and 
+                            float(ntradeoff.split(':')[1])==0.0 and
+                            int(index.split(':')[1])==index_obj):
+                            
+                            c+=1
+                            ap_test_split+=float(ap_test.split(':')[1])
+                    f.close()
+                    ap_lsvm.append(ap_test_split/10)
+                
         for pt in pos_tradeoff_obj_list:
             for nt in neg_tradeoff_obj_list:
                 ap_test_all=[]
                 for index_obj in index_list:
                     ap_test_split=0
-                    f= open("/local/wangxin/results/upmc_food/npglsvm_food_traintrainlist_testtestlist_5split/ap_summary_ecarttype_seed1_detail.txt")
+                    f= open("/local/wangxin/results/%s/npglsvm_%s_traintrainlist_testtestlist_5split/ap_summary_ecarttype_seed1_detail.txt"%base)
                     c=0
                     for line_index, line in enumerate(f):
                         category, lbd, scale, ptradeoff,ntradeoff, index, ap_test, ap_train = line.split()
@@ -44,10 +72,14 @@ def npglsvm():
                             c+=1
                             ap_test_split+=float(ap_test.split(':')[1])
                     f.close()
-                    ap_test_all.append(ap_test_split/20)
+                    ap_test_all.append(ap_test_split/10)
                     
-                print pt,nt,ap_test_all
+#                 print pt,nt,ap_test_all
+                print "scale:%d, pt:%f; nt:%f"%(scale_obj,pt,nt),
+                pair_t_test(ap_lsvm, ap_test_all)
 #                 print "%4.2f,"%(np.std(ap_test_all)*100),
+
+ 
 npglsvm()   
 0.0,0.0,   74.98, 77.16, 79.26, 79.60, 79.24, 77.47, 75.22, 70.05,
 0.0,0.001, 74.98, 77.13, 79.20, 79.26, 78.96, 77.44, 75.49, 69.68,
